@@ -187,19 +187,19 @@ class Player extends Entity {
     shoot() {
         const powerLevel = Math.floor(gameState.power);
         
-        if (powerLevel === 1) {
+        if (powerLevel <= 5) {
             playerBullets.push(new Bullet(this.x, this.y - 15, 8, 16, 10, 'player'));
         }
-        else if (powerLevel === 5) {
+        else if (powerLevel >= 6 && powerLevel <= 10) {
             playerBullets.push(new Bullet(this.x - 10, this.y - 15, 8, 16, 10, 'player'));
             playerBullets.push(new Bullet(this.x + 10, this.y - 15, 8, 16, 10, 'player'));
         }
-        else if (powerLevel === 10) {
+        else if (powerLevel >= 11 && powerLevel <= 15) {
             playerBullets.push(new Bullet(this.x, this.y - 20, 8, 16, 10, 'player'));
             playerBullets.push(new Bullet(this.x - 15, this.y - 10, 8, 16, 10, 'player', -0.2));
             playerBullets.push(new Bullet(this.x + 15, this.y - 10, 8, 16, 10, 'player', 0.2));
         }
-        else if (powerLevel === 4) {
+        else if (powerLevel >= 16) {
             playerBullets.push(new Bullet(this.x - 10, this.y - 15, 8, 16, 10, 'player'));
             playerBullets.push(new Bullet(this.x + 10, this.y - 15, 8, 16, 10, 'player'));
             playerBullets.push(new Bullet(this.x - 20, this.y - 5, 8, 16, 10, 'player', -0.3));
