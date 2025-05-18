@@ -19,6 +19,7 @@ audio.gameMusic.loop = true;
 let musicVolume = 0.5;
 let sfxVolume = 0.5;
 
+// 1. Zapisywanie ustawień dźwięku w localStorage
 function updateVolumes() {
     audio.mainMenu.volume = musicVolume;
     audio.gameMusic.volume = musicVolume;
@@ -31,6 +32,10 @@ function updateVolumes() {
     audio.lose.volume = sfxVolume;
     audio.powerup.volume = sfxVolume;
     audio.select.volume = sfxVolume;
+    
+    // Zapisz wartości w localStorage
+    localStorage.setItem('musicVolume', musicVolume);
+    localStorage.setItem('sfxVolume', sfxVolume);
 }
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -128,11 +133,6 @@ class GameMenu {
         
         if (this.highScores.length === 0) {
             this.highScores = [
-                { score: 50000, date: '2023-01-01' },
-                { score: 40000, date: '2023-01-02' },
-                { score: 30000, date: '2023-01-03' },
-                { score: 20000, date: '2023-01-04' },
-                { score: 10000, date: '2023-01-05' }
             ];
         }
     }
@@ -155,6 +155,14 @@ class GameMenu {
             for (const button of buttons) {
                 if (x >= button.x - button.width / 2 && x <= button.x + button.width / 2 &&
                     y >= button.y - button.height / 2 && y <= button.y + button.height / 2) {
+                    
+                    // Blokada przycisku Start Game gdy nie wybrano postaci
+                    if (button.action === 'start' && this.selectedCharacter === null) {
+                        // Nie pozwalaj wystartować - pokaż komunikat
+                        this.showMessage('Please select a character first!');
+                        return;
+                    }
+                    
                     audio.select.play();
                     
                     if (button.action === 'start' && this.selectedCharacter !== null) {
@@ -409,8 +417,35 @@ class GameMenu {
             this.ctx.fillText(char.name, char.x, char.y + 85);
         }
         
+        // Zmiana wyglądu przycisku Start Game w zależności od tego czy wybrano postać
         for (const button of this.buttons.character) {
-            this.drawButton(button);
+            if (button.text === 'Start Game') {
+                if (this.selectedCharacter === null) {
+                    // Nieaktywny przycisk - wyszarzony
+                    this.ctx.fillStyle = 'rgba(20, 20, 20, 0.3)';
+                    this.ctx.strokeStyle = '#444444';
+                } else {
+                    // Aktywny przycisk - normalny wygląd
+                    this.ctx.fillStyle = 'rgba(20, 0, 20, 0.6)';
+                    this.ctx.strokeStyle = '#ff0055';
+                }
+            } else {
+                // Inne przyciski - normalny wygląd
+                this.ctx.fillStyle = 'rgba(20, 0, 20, 0.6)';
+                this.ctx.strokeStyle = '#ff0055';
+            }
+            
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.roundRect(button.x - button.width / 2, button.y - button.height / 2, button.width, button.height, 5);
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            this.ctx.fillStyle = button.text === 'Start Game' && this.selectedCharacter === null ? '#888888' : '#ffffff';
+            this.ctx.font = '20px Orbitron';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(button.text, button.x, button.y);
         }
     }
 
@@ -424,63 +459,272 @@ class GameMenu {
         this.ctx.fillText('High Scores', this.width / 2, this.height / 4);
         this.ctx.shadowBlur = 0;
         
-        this.ctx.fillStyle = 'rgba(30, 30, 30, 0.8)';
-        this.ctx.strokeStyle = '#444';
-        this.ctx.lineWidth = 1;
+        // Większy i ładniejszy panel z gradientem
+        const panelWidth = 500;
+        const panelHeight = 360;
+        
+        // Tło z gradientem
+        const gradient = this.ctx.createLinearGradient(
+            this.width / 2 - panelWidth/2, 
+            this.height / 2 - panelHeight/2, 
+            this.width / 2 + panelWidth/2, 
+            this.height / 2 + panelHeight/2
+        );
+        gradient.addColorStop(0, 'rgba(40, 10, 40, 0.9)');
+        gradient.addColorStop(1, 'rgba(20, 5, 20, 0.9)');
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.strokeStyle = 'rgba(255, 0, 85, 0.5)';
+        this.ctx.lineWidth = 2;
         this.ctx.beginPath();
-        this.ctx.roundRect(this.width / 2 - 200, this.height / 2 - 100, 400, 300, 5);
+        this.ctx.roundRect(this.width / 2 - panelWidth/2, this.height / 2 - panelHeight/2, panelWidth, panelHeight, 10);
         this.ctx.fill();
         this.ctx.stroke();
         
-        this.ctx.font = '18px Orbitron';
+        // Nagłówki kolumn z gradientem
+        const headerGradient = this.ctx.createLinearGradient(
+            this.width / 2 - panelWidth/2 + 20, 
+            this.height / 2 - panelHeight/2 + 30,
+            this.width / 2 + panelWidth/2 - 20, 
+            this.height / 2 - panelHeight/2 + 30
+        );
+        headerGradient.addColorStop(0, '#ff0055');
+        headerGradient.addColorStop(1, '#ff00aa');
+        
+        this.ctx.fillStyle = headerGradient;
+        this.ctx.font = '22px Orbitron';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'middle';
-        let yPos = this.height / 2 - 70;
+        this.ctx.fillText('Rank', this.width / 2 - panelWidth/2 + 40, this.height / 2 - panelHeight/2 + 40);
+        this.ctx.fillText('Name', this.width / 2 - panelWidth/2 + 150, this.height / 2 - panelHeight/2 + 40);
+        
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText('Score', this.width / 2 + panelWidth/2 - 40, this.height / 2 - panelHeight/2 + 40);
+        
+        // Linia oddzielająca nagłówki z gradientem
+        const lineGradient = this.ctx.createLinearGradient(
+            this.width / 2 - panelWidth/2 + 20, 
+            this.height / 2 - panelHeight/2 + 60,
+            this.width / 2 + panelWidth/2 - 20, 
+            this.height / 2 - panelHeight/2 + 60
+        );
+        lineGradient.addColorStop(0, '#ff0055');
+        lineGradient.addColorStop(0.5, '#ffffff');
+        lineGradient.addColorStop(1, '#ff0055');
+        
+        this.ctx.strokeStyle = lineGradient;
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.width / 2 - panelWidth/2 + 20, this.height / 2 - panelHeight/2 + 60);
+        this.ctx.lineTo(this.width / 2 + panelWidth/2 - 20, this.height / 2 - panelHeight/2 + 60);
+        this.ctx.stroke();
+        
+        let yPos = this.height / 2 - panelHeight/2 + 90;
         
         if (this.highScores.length === 0) {
             this.ctx.textAlign = 'center';
             this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '24px Orbitron';
             this.ctx.fillText('No high scores yet!', this.width / 2, this.height / 2);
-            this.ctx.textAlign = 'left';
         } else {
+            // Wyniki
             for (let i = 0; i < Math.min(this.highScores.length, 10); i++) {
                 const score = this.highScores[i];
-                this.ctx.fillStyle = '#ffffff';
-                this.ctx.fillText(`${i + 1}. `, this.width / 2 - 180, yPos);
-                this.ctx.fillText(score.date, this.width / 2 - 150, yPos);
                 
-                this.ctx.textAlign = 'right';
-                this.ctx.fillText(score.score.toLocaleString(), this.width / 2 + 180, yPos);
+                // Tło wiersza (naprzemienne dla lepszej czytelności)
+                this.ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.2)';
+                this.ctx.fillRect(this.width / 2 - panelWidth/2 + 20, yPos - 15, panelWidth - 40, 30);
+                
+                // Rank z odpowiednim kolorem i efektami
+                this.ctx.textAlign = 'center';
+                if (i < 3) {
+                    let rankColor;
+                    let glow;
+                    
+                    switch (i) {
+                        case 0: // Złoty
+                            rankColor = '#ffcc00';
+                            glow = 'rgba(255, 204, 0, 0.8)';
+                            break;
+                        case 1: // Srebrny
+                            rankColor = '#cccccc';
+                            glow = 'rgba(204, 204, 204, 0.8)';
+                            break;
+                        case 2: // Brązowy
+                            rankColor = '#cc8844';
+                            glow = 'rgba(204, 136, 68, 0.8)';
+                            break;
+                    }
+                    
+                    this.ctx.fillStyle = rankColor;
+                    this.ctx.shadowColor = glow;
+                    this.ctx.shadowBlur = 5;
+                    this.ctx.font = 'bold 18px Orbitron';
+                    this.ctx.fillText(`${i + 1}.`, this.width / 2 - panelWidth/2 + 40, yPos);
+                    this.ctx.shadowBlur = 0;
+                } else {
+                    this.ctx.fillStyle = '#888888';
+                    this.ctx.font = '18px Orbitron';
+                    this.ctx.fillText(`${i + 1}.`, this.width / 2 - panelWidth/2 + 40, yPos);
+                }
+                
+                // Name
                 this.ctx.textAlign = 'left';
+                this.ctx.fillStyle = i < 3 ? '#ffffff' : '#aaaaaa';
+                this.ctx.font = i < 3 ? 'bold 18px Orbitron' : '18px Orbitron';
+                this.ctx.fillText(score.name || 'Player', this.width / 2 - panelWidth/2 + 150, yPos);
+                
+                // Score
+                this.ctx.textAlign = 'right';
+                if (i < 3) {
+                    this.ctx.fillStyle = i === 0 ? '#ffcc00' : (i === 1 ? '#cccccc' : '#cc8844');
+                    this.ctx.shadowColor = i === 0 ? 'rgba(255, 204, 0, 0.5)' : 
+                                        (i === 1 ? 'rgba(204, 204, 204, 0.5)' : 'rgba(204, 136, 68, 0.5)');
+                    this.ctx.shadowBlur = 3;
+                    this.ctx.font = 'bold 18px Orbitron';
+                    this.ctx.fillText(score.score.toLocaleString(), this.width / 2 + panelWidth/2 - 40, yPos);
+                    this.ctx.shadowBlur = 0;
+                } else {
+                    this.ctx.fillStyle = '#aaaaaa';
+                    this.ctx.font = '18px Orbitron';
+                    this.ctx.fillText(score.score.toLocaleString(), this.width / 2 + panelWidth/2 - 40, yPos);
+                }
                 
                 yPos += 30;
             }
         }
         
+        // Bardziej elegancki przycisk powrotu
         for (const button of this.buttons.highscore) {
-            this.drawButton(button);
+            this.ctx.fillStyle = 'rgba(20, 0, 20, 0.7)';
+            this.ctx.strokeStyle = '#ff0055';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.roundRect(button.x - button.width / 2, button.y - button.height / 2, button.width, button.height, 8);
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            // Dodanie gradientu do przycisku
+            const buttonGradient = this.ctx.createLinearGradient(
+                button.x - button.width / 2, button.y,
+                button.x + button.width / 2, button.y
+            );
+            buttonGradient.addColorStop(0, 'rgba(255, 0, 85, 0.1)');
+            buttonGradient.addColorStop(0.5, 'rgba(255, 0, 85, 0.3)');
+            buttonGradient.addColorStop(1, 'rgba(255, 0, 85, 0.1)');
+            
+            this.ctx.fillStyle = buttonGradient;
+            this.ctx.fill();
+            
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '20px Orbitron';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(button.text, button.x, button.y);
+            
+            // Dodanie symbolicznej ikony powrotu przed tekstem
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.beginPath();
+            this.ctx.moveTo(button.x - 80, button.y);
+            this.ctx.lineTo(button.x - 60, button.y - 8);
+            this.ctx.lineTo(button.x - 60, button.y + 8);
+            this.ctx.closePath();
+            this.ctx.fill();
         }
     }
 
     drawGameOver() {
+        // Tytuł
         this.ctx.fillStyle = '#ff0055';
         this.ctx.font = '48px Orbitron';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        this.ctx.shadowColor = 'rgba(255, 0, 85, 0.5)';
-        this.ctx.shadowBlur = 20;
-        this.ctx.fillText(gameState.gameWon ? 'You Win!' : 'Game Over', this.width / 2, this.height / 3);
+        this.ctx.shadowColor = 'rgba(255, 0, 85, 0.7)';
+        this.ctx.shadowBlur = 15;
+        
+        if (gameState.gameWon) {
+            this.ctx.fillText('Victory!', this.width / 2, this.height / 4);
+        } else {
+            this.ctx.fillText('Game Over', this.width / 2, this.height / 4);
+        }
         this.ctx.shadowBlur = 0;
         
+        // Panel wyników - ZWIĘKSZONA WYSOKOŚĆ
+        const panelWidth = 400;
+        const panelHeight = 150; // Zmniejszono z 200 na 150
+        
+        // Tło panelu
+        const gradient = this.ctx.createLinearGradient(
+            this.width / 2 - panelWidth/2, 
+            this.height / 2 - panelHeight/2, 
+            this.width / 2 + panelWidth/2, 
+            this.height / 2 + panelHeight/2
+        );
+        gradient.addColorStop(0, 'rgba(40, 10, 40, 0.9)');
+        gradient.addColorStop(1, 'rgba(20, 5, 20, 0.9)');
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.strokeStyle = 'rgba(255, 0, 85, 0.5)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.roundRect(this.width / 2 - panelWidth/2, this.height / 2 - panelHeight/2, panelWidth, panelHeight, 10);
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // Tekst wyników
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = '24px Orbitron';
-        this.ctx.fillText('Final Score: ' + this.scoreValue.toLocaleString(), this.width / 2, this.height / 2);
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Your Score', this.width / 2, this.height / 2 - 40);
+        
+        // Wynik (większy i z efektem)
+        this.ctx.font = '36px Orbitron';
+        this.ctx.fillStyle = '#ffcc00';
+        this.ctx.shadowColor = 'rgba(255, 204, 0, 0.7)';
+        this.ctx.shadowBlur = 10;
+        this.ctx.fillText(this.scoreValue.toLocaleString(), this.width / 2, this.height / 2 + 10);
+        this.ctx.shadowBlur = 0;
+        
+        // Przyciski - PRZESUNIĘTE NIŻEJ
+        let buttonOffset = 180; // Zmieniono z 80/160 na wyższe wartości
         
         for (const button of this.buttons.gameover) {
-            this.drawButton(button);
+            // Aktualizacja pozycji przycisku
+            if (button.text === 'Retry') {
+                button.y = this.height / 2 + buttonOffset;
+                buttonOffset += 80; // Zwiększono odstęp między przyciskami
+            } else if (button.text === 'Main Menu') {
+                button.y = this.height / 2 + buttonOffset;
+            }
+            
+            this.ctx.fillStyle = 'rgba(20, 0, 20, 0.7)';
+            this.ctx.strokeStyle = '#ff0055';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.roundRect(button.x - button.width / 2, button.y - button.height / 2, button.width, button.height, 8);
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            // Gradient przycisku
+            const buttonGradient = this.ctx.createLinearGradient(
+                button.x - button.width / 2, button.y,
+                button.x + button.width / 2, button.y
+            );
+            buttonGradient.addColorStop(0, 'rgba(255, 0, 85, 0.1)');
+            buttonGradient.addColorStop(0.5, 'rgba(255, 0, 85, 0.3)');
+            buttonGradient.addColorStop(1, 'rgba(255, 0, 85, 0.1)');
+            
+            this.ctx.fillStyle = buttonGradient;
+            this.ctx.fill();
+            
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '20px Orbitron';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(button.text, button.x, button.y);
         }
     }
-
+    
     render() {
         this.ctx.clearRect(0, 0, this.width, this.height);
         
@@ -506,6 +750,7 @@ class GameMenu {
     }
 }
 
+// 1. Modyfikacja wartości maxPower na podstawie poziomów strzelania
 let gameState = {
     running: false,
     paused: false,
@@ -514,7 +759,7 @@ let gameState = {
     lives: 3,
     bombs: 3,
     power: 1,
-    maxPower: 4,
+    maxPower: 20, // Zwiększono z 4 na 20, aby pasowało do poziomów strzelania
     timeEnergy: 100,
     maxTimeEnergy: 100,
     timeShiftActive: false,
@@ -595,8 +840,8 @@ class Player extends Entity {
         this.hitboxRadius = 5;
         this.shootCooldown = 0;
         this.invulnerable = 0;
-        this.normalSpeed = speed;
-        this.timeShiftSpeed = speed * 0.75;
+        this.normalSpeed = speed * 0.7; // Zmniejszona prędkość postaci o 30%
+        this.timeShiftSpeed = this.normalSpeed * 0.75;
     }
 
     update(deltaTime) {
@@ -663,7 +908,11 @@ class Player extends Entity {
 
     useBomb() {
         gameState.bombs--;
+        updateBombsDisplay();
         audio.bomb.play();
+        
+        // Dodanie animacji bomby
+        createBombAnimation();
         
         enemyBullets = [];
         
@@ -1045,6 +1294,12 @@ class PowerUp {
 }
 
 function initGame() {
+    // Remove any existing game UI first
+    const existingUI = document.getElementById('game-ui');
+    if (existingUI) {
+        existingUI.remove();
+    }
+    
     gameState.running = true;
     gameState.score = 0;
     gameState.lives = 3;
@@ -1062,7 +1317,7 @@ function initGame() {
         CANVAS_HEIGHT - 100,
         50,
         50,
-        5,
+        3.5, // Zmieniono z 5 na 3.5 - wolniejsza postać
         gameState.characterSelected === 0 ? images.reimu : images.flandre
     );
     
@@ -1282,15 +1537,40 @@ function updateTimeEnergyBar() {
     energyValue.textContent = Math.round(gameState.timeEnergy);
 }
 
+// 3. Zmiana działania paska power - różne kolory dla różnych poziomów mocy
 function updatePowerBar() {
     const powerBar = document.getElementById('power-bar');
     const powerValue = document.getElementById('power-value');
     if (!powerBar || !powerValue) return;
     
-    const percentage = (gameState.power / gameState.maxPower) * 100;
+    const powerLevel = Math.floor(gameState.power);
+    let percentage = 0;
+    let powerColor = '';
+    let powerText = powerLevel.toString();
+    
+    // Określenie koloru i procentowego wypełnienia w zależności od poziomu mocy
+    if (powerLevel <= 5) {
+        // Tryb 1: poziomy 1-5 (niebieski)
+        percentage = (powerLevel / 5) * 100;
+        powerColor = 'linear-gradient(90deg, #00c3ff, #0088ff)';
+    } else if (powerLevel <= 10) {
+        // Tryb 2: poziomy 6-10 (zielony)
+        percentage = ((powerLevel - 5) / 5) * 100;
+        powerColor = 'linear-gradient(90deg, #00ff88, #00aa44)';
+    } else if (powerLevel <= 15) {
+        // Tryb 3: poziomy 11-15 (pomarańczowy)
+        percentage = ((powerLevel - 10) / 5) * 100;
+        powerColor = 'linear-gradient(90deg, #ffcc00, #ff8800)';
+    } else {
+        // Tryb 4: MAX (czerwony)
+        percentage = 100;
+        powerColor = 'linear-gradient(90deg, #ff0055, #ff0000)';
+        powerText = 'MAX';
+    }
     
     powerBar.style.width = `${percentage}%`;
-    powerValue.textContent = gameState.power.toFixed(1);
+    powerBar.style.background = powerColor;
+    powerValue.textContent = powerText;
 }
 
 function updateProgressBar() {
@@ -1299,7 +1579,8 @@ function updateProgressBar() {
     const progressBar = document.getElementById('progress-bar');
     if (!progressBar) return;
     
-    gameState.gameProgress += 1/60/120;
+    // Wolniejsze wypełnianie paska postępu (zmniejszone tempo)
+    gameState.gameProgress += 1/60/240; // Zmienione z 120 na 240 - dwa razy wolniej
     
     if (gameState.gameProgress >= 1) {
         gameState.gameProgress = 1;
@@ -1389,6 +1670,20 @@ function checkCollisions() {
                 break;
             }
         }
+        
+        // Dodany kod dla kolizji z przeciwnikami
+        for (let i = 0; i < enemies.length; i++) {
+            const enemy = enemies[i];
+            if (distance(enemy.x, enemy.y, player.x, player.y) < (enemy.width / 2 + player.hitboxRadius)) {
+                playerHit();
+                break;
+            }
+        }
+        
+        // Kolizja z bossem
+        if (boss && distance(boss.x, boss.y, player.x, player.y) < (boss.width / 2 + player.hitboxRadius)) {
+            playerHit();
+        }
     }
 }
 
@@ -1415,12 +1710,26 @@ function playerHit() {
 }
 
 function gameOver(won) {
+    if (!gameState.running) return; // Prevent multiple calls
+    
+    gameState.gameWon = won;
     gameState.running = false;
     
+    // Store the final score before removing UI
+    const finalScore = gameState.score;
+    
+    // Remove the game UI elements
+    const existingUI = document.getElementById('game-ui');
+    if (existingUI) {
+        existingUI.remove();
+    }
+    
+    // Natychmiast zmień ekran na gameover
+    gameMenu.setFinalScore(finalScore);
+    gameMenu.currentScreen = 'gameover';
+    
+    // Pozostała część funkcji wykonaj po opóźnieniu
     setTimeout(() => {
-        gameMenu.setFinalScore(gameState.score);
-        gameMenu.currentScreen = 'gameover';
-        
         if (won) {
             audio.win.play();
         } else {
@@ -1429,14 +1738,109 @@ function gameOver(won) {
         
         audio.gameMusic.pause();
         
-        saveHighScore(gameState.score);
-    }, 1000);
+        // Zapisz wynik i pokaż formularz do wprowadzenia nicku
+        saveHighScore(finalScore);
+    }, 100);
 }
 
+// 2. Modyfikacja struktury highScores aby uwzględniała nick gracza
 function saveHighScore(score) {
+    // Tymczasowo przechowaj wynik do momentu wprowadzenia nicku
+    gameState.lastScore = score;
+    
+    // Pokaż formularz do wprowadzenia nazwy gracza
+    showNameInputForm();
+}
+
+// Nowa funkcja do wyświetlania formularza nicku
+function showNameInputForm() {
+    // Stwórz i dodaj formularz do strony
+    const formContainer = document.createElement('div');
+    formContainer.id = 'name-input-container';
+    formContainer.style.position = 'absolute';
+    formContainer.style.top = '40%';
+    formContainer.style.left = '50%';
+    formContainer.style.transform = 'translate(-50%, -50%)';
+    formContainer.style.padding = '20px';
+    formContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    formContainer.style.border = '2px solid #ff0055';
+    formContainer.style.borderRadius = '8px';
+    formContainer.style.zIndex = '1000';
+    formContainer.style.textAlign = 'center';
+    formContainer.style.boxShadow = '0 0 20px rgba(255, 0, 85, 0.6)';
+    
+    const header = document.createElement('h2');
+    header.textContent = 'Enter your name:';
+    header.style.color = '#ffffff';
+    header.style.fontFamily = 'Orbitron, sans-serif';
+    header.style.fontSize = '24px';
+    header.style.marginBottom = '15px';
+    
+    const form = document.createElement('form');
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        const nameInput = document.getElementById('player-name-input');
+        const playerName = nameInput.value.trim() || 'Player';
+        submitHighScore(playerName, gameState.lastScore);
+        formContainer.remove();
+    };
+    
+    const input = document.createElement('input');
+    input.id = 'player-name-input';
+    input.type = 'text';
+    input.placeholder = 'Your name';
+    input.maxLength = 15;
+    input.required = true;
+    input.style.padding = '8px 12px';
+    input.style.width = '100%';
+    input.style.fontFamily = 'Orbitron, sans-serif';
+    input.style.fontSize = '16px';
+    input.style.marginBottom = '15px';
+    input.style.borderRadius = '4px';
+    input.style.backgroundColor = '#222';
+    input.style.color = '#fff';
+    input.style.border = '1px solid #444';
+    input.style.outline = 'none';
+    input.style.boxSizing = 'border-box';
+    input.focus();
+    
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.textContent = 'Submit';
+    submitButton.style.padding = '8px 20px';
+    submitButton.style.fontFamily = 'Orbitron, sans-serif';
+    submitButton.style.fontSize = '16px';
+    submitButton.style.backgroundColor = '#ff0055';
+    submitButton.style.color = '#fff';
+    submitButton.style.border = 'none';
+    submitButton.style.borderRadius = '4px';
+    submitButton.style.cursor = 'pointer';
+    submitButton.style.transition = 'background-color 0.2s';
+    
+    submitButton.onmouseover = function() {
+        this.style.backgroundColor = '#ff3377';
+    };
+    submitButton.onmouseout = function() {
+        this.style.backgroundColor = '#ff0055';
+    };
+    
+    form.appendChild(input);
+    form.appendChild(submitButton);
+    formContainer.appendChild(header);
+    formContainer.appendChild(form);
+    
+    document.getElementById('game-container').appendChild(formContainer);
+    
+    // Ustaw focus na polu input po dodaniu do DOM
+    setTimeout(() => input.focus(), 100);
+}
+
+// Nowa funkcja do zapisywania wyniku z imieniem gracza
+function submitHighScore(playerName, score) {
     let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
     
     highScores.push({
+        name: playerName,
         score: score,
         date: new Date().toLocaleDateString()
     });
@@ -1456,10 +1860,10 @@ function saveHighScore(score) {
 
 let lastTime = 0;
 let enemySpawnTimer = 0;
-let enemySpawnInterval = 1.5;
+let enemySpawnInterval = 1.0; // Zmniejszone z 1.5 na 1.0 - więcej przeciwników
 
 function gameLoop(timestamp) {
-    const deltaTime = (timestamp - lastTime) / 1000;
+       const deltaTime = (timestamp - lastTime) / 1000 * 0.8; // Spowolnienie gry o 20%
     lastTime = timestamp;
     
     if (!gameState.running) {
@@ -1564,7 +1968,11 @@ function gameLoop(timestamp) {
         enemies = enemies.filter(enemy => !enemy.markedForDeletion);
         powerups = powerups.filter(powerup => !powerup.markedForDeletion);
         
-        document.getElementById('score-display').textContent = `Score: ${gameState.score}`;
+        // Check if score-display exists before trying to update it
+        const scoreDisplay = document.getElementById('score-display');
+        if (scoreDisplay) {
+            scoreDisplay.textContent = `Score: ${gameState.score}`;
+        }
         
         if (gameState.gameWon) {
             gameOver(true);
@@ -1668,3 +2076,62 @@ window.onload = function() {
     
     requestAnimationFrame(gameLoop);
 };
+
+// Przeniesienie funkcji createBombAnimation poza klasę Player
+function createBombAnimation() {
+    // Tworzenie warstwy animacji
+    const animationLayer = document.createElement('div');
+    animationLayer.style.position = 'absolute';
+    animationLayer.style.top = '0';
+    animationLayer.style.left = '0';
+    animationLayer.style.width = '100%';
+    animationLayer.style.height = '100%';
+    animationLayer.style.zIndex = '100';
+    animationLayer.style.pointerEvents = 'none';
+    
+    // Dodanie fali uderzeniowej
+    const shockwave = document.createElement('div');
+    shockwave.style.position = 'absolute';
+    shockwave.style.top = '50%';
+    shockwave.style.left = '50%';
+    shockwave.style.transform = 'translate(-50%, -50%)';
+    shockwave.style.width = '10px';
+    shockwave.style.height = '10px';
+    shockwave.style.borderRadius = '50%';
+    shockwave.style.background = 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,150,0,0.7) 50%, rgba(255,0,0,0) 100%)';
+    shockwave.style.boxShadow = '0 0 50px 20px rgba(255,100,0,0.8)';
+    shockwave.style.opacity = '0.9';
+    shockwave.style.transition = 'all 0.5s ease-out';
+    
+    // Dodanie efektu błysku
+    const flash = document.createElement('div');
+    flash.style.position = 'absolute';
+    flash.style.top = '0';
+    flash.style.left = '0';
+    flash.style.width = '100%';
+    flash.style.height = '100%';
+    flash.style.backgroundColor = 'rgba(255,255,255,0.8)';
+    flash.style.opacity = '1';
+    flash.style.transition = 'opacity 0.3s ease-out';
+    
+    animationLayer.appendChild(shockwave);
+    animationLayer.appendChild(flash);
+    document.getElementById('game-container').appendChild(animationLayer);
+    
+    // Animacja błysku
+    setTimeout(() => {
+        flash.style.opacity = '0';
+    }, 50);
+    
+    // Animacja fali uderzeniowej
+    setTimeout(() => {
+        shockwave.style.width = '150vw';
+        shockwave.style.height = '150vw';
+        shockwave.style.opacity = '0';
+    }, 50);
+    
+    // Usunięcie warstwy animacji po zakończeniu
+    setTimeout(() => {
+        animationLayer.remove();
+    }, 600);
+}
