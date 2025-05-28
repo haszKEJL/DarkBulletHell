@@ -1578,7 +1578,7 @@ function updateProgressBar() {
     if (!progressBar) return;
 
 
-    gameState.gameProgress += 1/60/240; 
+    gameState.gameProgress += 1/60/140;
 
     if (gameState.gameProgress >= 1) {
         gameState.gameProgress = 1;
@@ -1858,7 +1858,7 @@ function submitHighScore(playerName, score) {
 
 let lastTime = 0;
 let enemySpawnTimer = 0;
-let enemySpawnInterval = 1.0; 
+let enemySpawnInterval = 0.65;
 
 function gameLoop(timestamp) {
     const deltaTime = (timestamp - lastTime) / 1000 * 0.8; 
