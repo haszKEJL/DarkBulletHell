@@ -8,8 +8,61 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="game-canvas" width="600" height="800"></canvas>
+    <div id="main-container">
+        <div id="game-container">
+            <canvas id="game-canvas" width="600" height="800"></canvas>
+        </div>
+        
+        <div id="controls-panel">
+            <h3>Controls</h3>
+            <div class="control-section">
+                <h4>Movement</h4>
+                <div class="control-item">
+                    <span class="key">↑ ↓ ← →</span>
+                    <span class="description">Move character</span>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h4>Combat</h4>
+                <div class="control-item">
+                    <span class="key">Z</span>
+                    <span class="description">Shoot</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">C</span>
+                    <span class="description">Use bomb</span>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h4>Special</h4>
+                <div class="control-item">
+                    <span class="key">Shift</span>
+                    <span class="description">Time shift (slow time)</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">ESC</span>
+                    <span class="description">Pause game</span>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h4>Tips</h4>
+                <div class="tip-item">
+                    • Collect power-ups to increase firepower
+                </div>
+                <div class="tip-item">
+                    • Use time shift wisely - limited energy
+                </div>
+                <div class="tip-item">
+                    • Red dot shows your hitbox
+                </div>
+                <div class="tip-item">
+                    • Bombs clear all enemy bullets
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
