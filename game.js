@@ -619,15 +619,6 @@ class GameMenu {
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(button.text, button.x, button.y);
-
-
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.beginPath();
-            this.ctx.moveTo(button.x - 80, button.y);
-            this.ctx.lineTo(button.x - 60, button.y - 8);
-            this.ctx.lineTo(button.x - 60, button.y + 8);
-            this.ctx.closePath();
-            this.ctx.fill();
         }
     }
 
